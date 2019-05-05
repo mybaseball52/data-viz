@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+</head>
+
+<body>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+
+    <script>
+        let height = 100;
+        let width = 400;
+
+        let dataset;
+
+        function buildLineChart() {
+            let lineFunc = d3.line()
+                .x(function (d) {
+                    return (d.date - "20190505") * 20;
+                })
+                .y(function (d) {
+                    return (height - d.humidity);
+                })
+                .curve(d3.curveLinear);
+
+            let svg = d3.select("body").append("svg")
+                .attr("width", width)
+                .attr("height", height)
+
+            let viz = svg.append("path")
+                .data([dataset])
+                .attr("d", lineFunc)
+                .attr("stroke", "red")
+                .attr("stroke-width", 2)
+                .attr("fill", "none");
+        }
+
+        let salesTotal = 0.0;
+        function showDetails() {
+            let t = d3.select("body").append("table");
+
+            for (let i = 0; i < dataset.length; i++) {
+                salesTotal += parseInt(dataset[i].sales);
+            }
+
+            salesAvg = salesTotal / dataset.length;
+            let metrics = [];
+
+            metrics.push("Sales Total: " + salesTotal);
+            metrics.push("Sales Average: " + salesAvg);
+
+            let tr = t.selectAll("tr")
+                .data(metrics)
+                .enter()
+                .append("tr")
+                .append("td")
+                .text(function (d) {
+                    return d;
+                });
+        }
+
+        d3.json("https://opendata.cwb.gov.tw/api/v1/rest/datastore/F-D0047-091?Authorization=CWB-3727EF81-9A3C-4D34-A0B7-3F7D54B3EDCD&format=JSON&locationName=%E8%87%BA%E5%8C%97%E5%B8%82&elementName=RH", (error, data) => {
+            if (error) {
+                console.log(error);
+            } else {
+                console.log(data);
+                let recordset = data.records.locations[0].location[0].weatherElement[0].time;
+                
+                let ds = new Array();
+                recordset.forEach((element, index) => {
+                    let isOdd = index%2 !== 0;
+                    if(isOdd) return;
+
+                    let humidity = element.elementValue[0].value;
+
+                    //先取得當日日期，透過 string split 將日期分成['YYYY-MM-DD','HH-mm-ss']，然後讀取第一個成為日期;
+                    let date = element.startTime.split(" ")[0];
+                    
+                    //將格式 'YYYY-MM-DD' 變成 'YYYYMMDD'
+                    date =date.split("-").join("");
+                    
+                    let elm = {humidity: humidity, date: date};
+                    ds.push(elm);
+                });
+
+                console.log(ds);
+
+                dataset = ds;
+            }
+
+            buildLineChart();
+            //showDetails();
+        })
+    </script>
+</body>
+
+</html>
